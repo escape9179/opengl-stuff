@@ -58,10 +58,8 @@ struct Vector4f {
     float w;
 };
 
-void checkOpenGLError() {
-    char buffer[32];
-    wsprintf(buffer, "%i", glGetError());
-    MessageBox(nullptr, buffer, "Last error", MB_OK);
+void GLAPIENTRY debugMessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
+    fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n", (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type, severity, message);
 }
 
 HGLRC hglrc; // Handle to an OpenGL rendering context.
@@ -73,7 +71,45 @@ static const Vertex vertexData[] = {
         {0, 1, 0.0, 1.0, 0.5, 1.0, 1.0, 1.0}
 };
 
+static const Vertex blockVertexData[] = {
+        /* Front face*/
+        {-1.0, -1.0, -1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+        {1.0, -1.0, -1.0, 1.0, 1.0, 0.0, 0.0, 1.0},
+        {1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 0.0, 1.0},
+        {-1.0, -1.0, -1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+        {1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 0.0, 1.0},
+        {-1.0, 1.0, -1.0, 1.0, 0.0, 1.0, 0.0, 1.0},
+
+        /* Left face */
+        {-1.0, -1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+        {-1.0, -1.0, -1.0, 1.0, 1.0, 0.0, 0.0, 1.0},
+        {-1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 0.0, 1.0},
+        {-1.0, -1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+        {-1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 0.0, 1.0},
+        {-1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0},
+
+        /* Back face */
+        {-1.0, -1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+        {1.0, -1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0},
+        {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0},
+        {-1.0, -1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+        {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0},
+        {-1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0},
+
+        /* Right face */
+        {-1.0, -1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+        {-1.0, -1.0, -1.0, 1.0, 1.0, 0.0, 0.0, 1.0},
+        {-1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 0.0, 1.0},
+        {-1.0, -1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0},
+        {-1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 0.0, 1.0},
+        {-1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0},
+};
+
 float aspect = 1.0f;
+
+int main(int argc, char *argv[]) {
+    WinMain(nullptr, nullptr, argv[0], SHOW_OPENWINDOW);
+}
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, char *args, int iCmdShow) {
     /* Named used for the window class. Any windows that want similar functionality will probably use this class name
@@ -150,6 +186,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, char *args, int
         return 0;
     }
 
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(debugMessageCallback, nullptr);
+
     ShowWindow(hwnd, iCmdShow); // Show the window on the screen.
 
     char *vertexShaderSource = readFile("vshader.vert");
@@ -217,7 +256,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, char *args, int
      * param2 is the size of the bufferNames
      * param3 is the initial vertexData to store in the bufferNames
      * param4 are the mapping flags, in this case it's allowing the bufferNames to be mapped for writing purposes. */
-    glNamedBufferStorage(bufferNames[0], sizeof(vertexData), nullptr, GL_MAP_WRITE_BIT | GL_MAP_READ_BIT);
+//    glNamedBufferStorage(bufferNames[0], sizeof(vertexData), nullptr, GL_MAP_WRITE_BIT | GL_MAP_READ_BIT);
+    glNamedBufferStorage(bufferNames[0], sizeof(blockVertexData), nullptr, GL_MAP_WRITE_BIT | GL_MAP_READ_BIT);
 
     /* Set up bufferNames for storing transformation matrices. */
     glBindBuffer(GL_ARRAY_BUFFER, bufferNames[1]);
@@ -236,7 +276,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, char *args, int
 
     /* Map the buffer data store to the clients address space. */
     void *ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-    memcpy(ptr, vertexData, sizeof(vertexData));
+//    memcpy(ptr, vertexData, sizeof(vertexData));
+    memcpy(ptr, blockVertexData, sizeof(blockVertexData));
 
     /* We're done mapping the buffer, so unmap it from the clients address space. */
     glUnmapBuffer(GL_ARRAY_BUFFER);
@@ -313,7 +354,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, char *args, int
      * '1' is the number of mipmap levels.
      * 'GL_RGBA32F' is the type of data the texture will hold (32-bit floating-point RGBA data).
      * '256' and '256' is the width and height of the texture (256x256 texels). */
-    glTextureStorage2D(texture, 1, GL_RGBA32F, 16, 16);
+    glTextureStorage2D(texture, 1, GL_RGBA32F, width, height);
 
     /* Fill texture buffer associated with object with texture data.
      * 'texture' is the texture object we created.
@@ -323,7 +364,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, char *args, int
      * 'GL_RGBA' represents 4 channel data.
      * 'GL_FLOAT' is the type of the data.
      * 'image.data()' is the texture data we're using for the texture. */
-    glTextureSubImage2D(texture, 0, 0, 0, 16, 16, GL_RGBA, GL_UNSIGNED_BYTE, &image[0]);
+    glTextureSubImage2D(texture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, &image[0]);
 
     /* Bind texture object to the context using GL_TEXTURE_2D binding point. */
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -370,7 +411,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, char *args, int
                                                                     // like there's smudges on the screen.
         glClearColor(1.0, 0.0, 1.0, 1.0);
         glVertexAttrib1f(1, time); // Set the vertex attribute at location 0 to 'time'
-        glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / sizeof(float));
+//        glDrawArrays(GL_TRIANGLES, 0, sizeof(vertexData) / sizeof(float));
+        glDrawArrays(GL_TRIANGLES, 0, sizeof(blockVertexData) / sizeof(float));
 
         wglSwapLayerBuffers(hdc, WGL_SWAP_MAIN_PLANE); // Swap front and back buffers because the context is double-buffered
 
